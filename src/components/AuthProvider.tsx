@@ -8,10 +8,11 @@ import { supabase } from '@/lib/supabase'
 interface AuthCtx {
   user: User | null
   userName: string
+  isAdmin: boolean
   signOut: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthCtx>({ user: null, userName: '', signOut: async () => {} })
+const AuthContext = createContext<AuthCtx>({ user: null, userName: '', isAdmin: false, signOut: async () => {} })
 
 export function useAuth() {
   return useContext(AuthContext)
@@ -109,6 +110,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }
 
   const userName: string = user.user_metadata?.name ?? ''
+  const isAdmin: boolean = user.user_metadata?.role === 'admin'
 
   // 이름 미설정 시 이름 입력 화면
   if (!userName) {
@@ -144,7 +146,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }
 
   return (
-    <AuthContext.Provider value={{ user, userName, signOut }}>
+    <AuthContext.Provider value={{ user, userName, isAdmin, signOut }}>
       {children}
     </AuthContext.Provider>
   )

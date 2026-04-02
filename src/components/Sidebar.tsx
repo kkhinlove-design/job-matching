@@ -15,9 +15,13 @@ const nav = [
   { href: '/send', label: '문자 발송', icon: '📱' },
 ]
 
+const adminNav = [
+  { href: '/admin/users', label: '사용자 관리', icon: '🔐' },
+]
+
 export default function Sidebar() {
   const pathname = usePathname()
-  const { user, signOut } = useAuth()
+  const { user, isAdmin, signOut } = useAuth()
   const [open, setOpen] = useState(false)
 
   const inner = (
@@ -41,6 +45,25 @@ export default function Sidebar() {
             <span>{item.label}</span>
           </Link>
         ))}
+        {isAdmin && (
+          <>
+            <div className="border-t border-gray-700 my-2" />
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider px-3 mb-1">관리자</p>
+            {adminNav.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 text-sm transition-colors ${
+                  pathname === item.href ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800'
+                }`}
+              >
+                <span>{item.icon}</span>
+                <span>{item.label}</span>
+              </Link>
+            ))}
+          </>
+        )}
       </nav>
       {user && (
         <div className="p-3 border-t border-gray-700">
