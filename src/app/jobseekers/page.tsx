@@ -985,7 +985,7 @@ export default function JobSeekersPage() {
                 const age = calcAge(js.resident_number ?? '')
                 const gender = calcGender(js.resident_number ?? '')
                 const placementCount = js.placement_history?.length ?? 0
-                const empHistoryCount = js.employment_history?.length ?? 0
+                const empHistoryCount = (js.employment_history?.length ?? 0) || (js.employment_type ? 1 : 0)
                 const appHistoryCount = js.job_application_history?.length ?? 0
                 return (
                   <tr key={js.id} className={`hover:bg-gray-50 ${selectedIds.has(js.id) ? 'bg-blue-50' : ''}`}>
