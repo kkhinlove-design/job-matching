@@ -10,6 +10,8 @@ export interface Employer {
   contact_phone: string
   address: string
   region: string
+  job_application_date: string | null
+  job_expiry_date: string | null
   notes: string | null
   created_at: string
 }

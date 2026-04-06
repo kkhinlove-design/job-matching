@@ -7,6 +7,8 @@ create table employers (
   contact_phone text default '',
   address text default '',
   region text default '',
+  job_application_date date,
+  job_expiry_date date,
   notes text,
   created_at timestamptz default now()
 );
@@ -105,3 +107,9 @@ create index on match_results(jobseeker_id);
 --   created_at timestamptz default now()
 -- );
 -- create index if not exists on placement_history(jobseeker_id);
+
+-- =============================================
+-- 구인처 구인신청일/구인만료일 추가 마이그레이션
+-- =============================================
+-- alter table employers add column if not exists job_application_date date;
+-- alter table employers add column if not exists job_expiry_date date;

@@ -20,10 +20,12 @@ function classifyRegion(region: string): string {
 interface SeekerRow { region: string; active: boolean; employment_type: string | null; job_category: string | null; job_expiry_date: string | null }
 interface RegionStat { name: string; total: number; active: number; alsen: number; bonjin: number; expired: number }
 interface ExpiringSeeker { id: string; name: string; phone: string; job_expiry_date: string }
+interface ExpiringEmployer { id: string; company_name: string; contact_phone: string; job_expiry_date: string; job_duty: string | null }
 interface Stats {
   employers: number; totalJobCount: number; activeJobseekers: number; totalJobseekers: number
   foodCenter: number; otherCategory: number
   alsenEmployed: number; bonjinEmployed: number
+  totalPlacementCount: number
   activePostings: number; totalPostings: number; todayPostings: number
   pendingMatches: number; sentMatches: number
   postingsBySource: { worknet: number; saramin: number; jobkorea: number; other: number }
@@ -100,6 +102,7 @@ export default function Dashboard() {
   const [recentSeekers, setRecentSeekers] = useState<RecentSeeker[]>([])
   const [expiringPostings, setExpiringPostings] = useState<ExpiringPosting[]>([])
   const [expiringSeekersData, setExpiringSeekersData] = useState<ExpiringSeeker[]>([])
+  const [expiringEmployersData, setExpiringEmployersData] = useState<ExpiringEmployer[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -118,6 +121,8 @@ export default function Dashboard() {
         { data: recentSeekersData },
         { data: expiringData },
         { data: expiringSeekersRaw },
+        { count: totalPlacementCount },
+        { data: expiringEmployersRaw },
       ] = await Promise.all([
         supabase.from('employers').select('job_count'),
         supabase.from('job_seekers').select('*', { count: 'exact', head: true }),
@@ -133,6 +138,10 @@ export default function Dashboard() {
         supabase.from('job_seekers').select('id, name, phone, job_expiry_date')
           .eq('active', true).not('job_expiry_date', 'is', null).lte('job_expiry_date', today)
           .order('job_expiry_date', { ascending: true }).limit(5),
+        supabase.from('placement_history').select('*', { count: 'exact', head: true }),
+        supabase.from('employers').select('id, company_name, contact_phone, job_expiry_date, job_duty')
+          .not('job_expiry_date', 'is', null).lte('job_expiry_date', today)
+          .order('job_expiry_date', { ascending: true }).limit(5),
       ])
 
       const employers = employersData?.length ?? 0
@@ -142,8 +151,9 @@ export default function Dashboard() {
       const alsenEmployed = seekers.filter((s) => s.employment_type === '알선취업').length
       const bonjinEmployed = seekers.filter((s) => s.employment_type === '본인취업').length
       const activeJobseekers = seekers.filter((s) => s.active).length
-      const foodCenter = seekers.filter((s) => s.active && s.job_category === '식품센터').length
-      const otherCategory = seekers.filter((s) => s.active && s.job_category === '그 외').length
+      // 누계: 취업완료 포함하여 카운트
+      const foodCenter = seekers.filter((s) => s.job_category === '식품센터').length
+      const otherCategory = seekers.filter((s) => s.job_category === '그 외').length
 
       const postRows = postingsData ?? []
       const todayPostings = postRows.filter((r) => r.collected_at?.slice(0, 10) === today).length
@@ -172,11 +182,12 @@ export default function Dashboard() {
         if (s.active && s.job_expiry_date && s.job_expiry_date <= today) regionMap[key].expired++
       }
 
-      setStats({ employers, totalJobCount, activeJobseekers, totalJobseekers: totalJobseekers ?? 0, foodCenter, otherCategory, alsenEmployed, bonjinEmployed, activePostings, totalPostings: totalPostings ?? 0, todayPostings, pendingMatches: pendingMatches ?? 0, sentMatches: sentMatches ?? 0, postingsBySource: bySource })
+      setStats({ employers, totalJobCount, activeJobseekers, totalJobseekers: totalJobseekers ?? 0, foodCenter, otherCategory, alsenEmployed, bonjinEmployed, totalPlacementCount: totalPlacementCount ?? 0, activePostings, totalPostings: totalPostings ?? 0, todayPostings, pendingMatches: pendingMatches ?? 0, sentMatches: sentMatches ?? 0, postingsBySource: bySource })
       setRegionStats(allKeys.map((k) => regionMap[k]))
       setRecentSeekers(recentSeekersData ?? [])
       setExpiringPostings(expiringData ?? [])
       setExpiringSeekersData((expiringSeekersRaw ?? []) as ExpiringSeeker[])
+      setExpiringEmployersData((expiringEmployersRaw ?? []) as ExpiringEmployer[])
       setLoading(false)
     }
     fetchAll()
@@ -211,12 +222,19 @@ export default function Dashboard() {
       </div>
 
       {/* 취업 통계 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <Link href="/jobseekers?category=식품센터">
+          <div className="bg-white rounded-xl shadow-sm p-4 md:p-5 hover:shadow-md transition-shadow cursor-pointer h-full">
+            <p className="text-xs md:text-sm text-gray-500 mb-1">식품센터 구직신청</p>
+            <p className="text-2xl md:text-3xl font-bold text-orange-500">{s.foodCenter}</p>
+            <p className="text-xs text-gray-400 mt-1">그 외 {s.otherCategory}명 / 전체 누계 {s.foodCenter + s.otherCategory}명</p>
+          </div>
+        </Link>
         <Link href="/jobseekers">
           <div className="bg-white rounded-xl shadow-sm p-4 md:p-5 hover:shadow-md transition-shadow cursor-pointer h-full">
-            <p className="text-xs md:text-sm text-gray-500 mb-1">식품센터</p>
-            <p className="text-2xl md:text-3xl font-bold text-orange-500">{s.foodCenter}</p>
-            <p className="text-xs text-gray-400 mt-1">그 외 {s.otherCategory}명 / 전체 {s.activeJobseekers}명</p>
+            <p className="text-xs md:text-sm text-gray-500 mb-1">알선건수 합계</p>
+            <p className="text-2xl md:text-3xl font-bold text-amber-600">{s.totalPlacementCount}</p>
+            <p className="text-xs text-gray-400 mt-1">전체 알선이력 누계</p>
           </div>
         </Link>
         <Link href="/jobseekers?type=알선취업">
@@ -329,6 +347,36 @@ export default function Dashboard() {
           )}
           <Link href="/jobseekers" className="mt-3 block text-xs text-blue-500 hover:underline text-right">전체 보기 →</Link>
         </div>
+      </div>
+
+      {/* 구인만료기업 */}
+      <div className="bg-white rounded-xl shadow-sm p-4 md:p-6">
+        <h3 className="font-semibold text-gray-700 mb-4">구인만료기업 <span className="text-xs text-gray-400 font-normal">(만료일 가까운 순)</span></h3>
+        {expiringEmployersData.length === 0 ? (
+          <p className="text-sm text-gray-400">구인만료 기업이 없습니다.</p>
+        ) : (
+          <div className="space-y-2">
+            {expiringEmployersData.map((emp) => {
+              const expDate = new Date(emp.job_expiry_date)
+              const now = new Date(); now.setHours(0,0,0,0)
+              const daysOver = Math.ceil((now.getTime() - expDate.getTime()) / 86400000)
+              return (
+                <div key={emp.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                  <div className="min-w-0">
+                    <span className="text-sm font-medium text-gray-800">{emp.company_name}</span>
+                    <span className="text-xs text-gray-400 ml-2">{emp.job_duty || ''}</span>
+                    {emp.contact_phone && <span className="text-xs text-gray-400 ml-2">{emp.contact_phone}</span>}
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <span className="text-xs text-orange-500 font-medium block">{emp.job_expiry_date}</span>
+                    {daysOver > 0 && <span className="text-[10px] text-red-400">+{daysOver}일 초과</span>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        <Link href="/employers" className="mt-3 block text-xs text-blue-500 hover:underline text-right">전체 보기 →</Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

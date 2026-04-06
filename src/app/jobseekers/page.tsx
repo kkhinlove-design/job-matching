@@ -94,11 +94,13 @@ export default function JobSeekersPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [employmentFilter, setEmploymentFilter] = useState<string>('')
+  const [categoryFilter, setCategoryFilter] = useState<string>('')
   const [uploadMsg, setUploadMsg] = useState('')
   const [placements, setPlacements] = useState<PlacementRow[]>([])
   const [empHistories, setEmpHistories] = useState<EmpHistoryRow[]>([])
   const [appHistories, setAppHistories] = useState<AppHistoryRow[]>([])
   const [showRN, setShowRN] = useState(false)        // 주민번호 보기 토글
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const fileRef = useRef<HTMLInputElement>(null)
 
   async function fetchList() {
@@ -114,6 +116,8 @@ export default function JobSeekersPage() {
   useEffect(() => {
     const type = searchParams.get('type')
     if (type) setEmploymentFilter(type)
+    const category = searchParams.get('category')
+    if (category) setCategoryFilter(category)
   }, [searchParams])
 
   function openNew() {
@@ -184,6 +188,22 @@ export default function JobSeekersPage() {
       seekerId = data?.id ?? null
     }
 
+    // 현재 취업 상태가 설정되어 있으면 취업이력에 자동 동기화
+    if (seekerId && form.employment_type && form.employment_company) {
+      const alreadyExists = empHistories.some(
+        (h) => h.company === form.employment_company && h.employment_type === form.employment_type
+      )
+      if (!alreadyExists) {
+        empHistories.push({
+          employment_date: form.employment_date ?? new Date().toISOString().slice(0, 10),
+          resignation_date: '',
+          company: form.employment_company,
+          employment_type: form.employment_type,
+        })
+        setEmpHistories([...empHistories])
+      }
+    }
+
     // 알선이력 저장: 기존 삭제 후 재삽입
     if (seekerId) {
       await supabase.from('placement_history').delete().eq('jobseeker_id', seekerId)
@@ -240,6 +260,39 @@ export default function JobSeekersPage() {
   async function handleDelete(id: string) {
     if (!confirm('삭제하시겠습니까? 알선이력도 함께 삭제됩니다.')) return
     await supabase.from('job_seekers').delete().eq('id', id)
+    fetchList()
+  }
+
+  // ─── 선택/전체 삭제 ─────────────────────────────────────
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+  function toggleSelectAll() {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(filtered.map((js) => js.id)))
+    }
+  }
+  async function handleDeleteSelected() {
+    if (selectedIds.size === 0) return
+    if (!confirm(`선택한 ${selectedIds.size}명을 삭제하시겠습니까? 관련 이력도 함께 삭제됩니다.`)) return
+    const ids = Array.from(selectedIds)
+    await supabase.from('job_seekers').delete().in('id', ids)
+    setSelectedIds(new Set())
+    fetchList()
+  }
+  async function handleDeleteAll() {
+    if (filtered.length === 0) return
+    if (!confirm(`현재 표시된 ${filtered.length}명을 전체 삭제하시겠습니까? 관련 이력도 함께 삭제됩니다.`)) return
+    if (!confirm('정말로 전체 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return
+    const ids = filtered.map((js) => js.id)
+    await supabase.from('job_seekers').delete().in('id', ids)
+    setSelectedIds(new Set())
     fetchList()
   }
 
@@ -402,11 +455,20 @@ export default function JobSeekersPage() {
 
       function toDateStr(val: string | number | Date | undefined): string | null {
         if (!val) return null
-        if (val instanceof Date) return val.toISOString().slice(0, 10)
+        if (val instanceof Date) {
+          // 로컬 타임존 기준으로 날짜 추출 (UTC 변환 시 D-1 방지)
+          const y = val.getFullYear()
+          const m = String(val.getMonth() + 1).padStart(2, '0')
+          const d = String(val.getDate()).padStart(2, '0')
+          return `${y}-${m}-${d}`
+        }
         if (typeof val === 'number') {
-          // 엑셀 시리얼 날짜 변환
+          // 엑셀 시리얼 날짜 변환 (로컬 기준)
           const d = new Date(Math.round((val - 25569) * 86400 * 1000))
-          return d.toISOString().slice(0, 10)
+          const y = d.getUTCFullYear()
+          const m = String(d.getUTCMonth() + 1).padStart(2, '0')
+          const dd = String(d.getUTCDate()).padStart(2, '0')
+          return `${y}-${m}-${dd}`
         }
         return String(val) || null
       }
@@ -455,6 +517,7 @@ export default function JobSeekersPage() {
 
   const filtered = list.filter((js) => {
     if (employmentFilter && js.employment_type !== employmentFilter) return false
+    if (categoryFilter && js.job_category !== categoryFilter) return false
     if (!search) return true
     const s = search.toLowerCase()
     const gender = calcGender(js.resident_number ?? '')
@@ -864,7 +927,7 @@ export default function JobSeekersPage() {
         </div>
       )}
 
-      {/* 검색 */}
+      {/* 검색 + 삭제 */}
       <div className="mb-4 flex gap-3 items-center flex-wrap">
         <input className="border rounded-lg px-3 py-2 text-sm w-64"
           placeholder="이름, 연락처, 직종, 지역으로 검색"
@@ -875,7 +938,25 @@ export default function JobSeekersPage() {
             <button onClick={() => setEmploymentFilter('')} className="text-indigo-400 hover:text-indigo-700 font-bold">×</button>
           </div>
         )}
+        {categoryFilter && (
+          <div className="flex items-center gap-1.5 bg-orange-50 text-orange-700 px-3 py-1.5 rounded-full text-sm">
+            <span>{categoryFilter}</span>
+            <button onClick={() => setCategoryFilter('')} className="text-orange-400 hover:text-orange-700 font-bold">×</button>
+          </div>
+        )}
         <span className="text-sm text-gray-500">총 {filtered.length}명</span>
+        <div className="ml-auto flex gap-2">
+          {selectedIds.size > 0 && (
+            <button onClick={handleDeleteSelected}
+              className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-red-600">
+              선택 삭제 ({selectedIds.size})
+            </button>
+          )}
+          <button onClick={handleDeleteAll}
+            className="border border-red-300 text-red-500 px-3 py-1.5 rounded-lg text-sm hover:bg-red-50">
+            전체 삭제
+          </button>
+        </div>
       </div>
 
       {/* 목록 테이블 */}
@@ -888,6 +969,11 @@ export default function JobSeekersPage() {
           <table className="w-full text-sm whitespace-nowrap">
             <thead className="bg-gray-50 text-gray-600 sticky top-0 z-10">
               <tr>
+                <th className="px-3 py-3 w-8">
+                  <input type="checkbox" className="w-4 h-4 rounded"
+                    checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                    onChange={toggleSelectAll} />
+                </th>
                 {['연번', '서비스신청일', '이름', '성별', '만나이', '최종학력', '휴대폰', '거주지',
                   '구직신청', '알선횟수', '취업형태', '취업처', '취업횟수', '담당자', '관리'].map((h) => (
                   <th key={h} className="text-left px-3 py-3 font-medium">{h}</th>
@@ -902,7 +988,12 @@ export default function JobSeekersPage() {
                 const empHistoryCount = js.employment_history?.length ?? 0
                 const appHistoryCount = js.job_application_history?.length ?? 0
                 return (
-                  <tr key={js.id} className="hover:bg-gray-50">
+                  <tr key={js.id} className={`hover:bg-gray-50 ${selectedIds.has(js.id) ? 'bg-blue-50' : ''}`}>
+                    <td className="px-3 py-2.5">
+                      <input type="checkbox" className="w-4 h-4 rounded"
+                        checked={selectedIds.has(js.id)}
+                        onChange={() => toggleSelect(js.id)} />
+                    </td>
                     <td className="px-3 py-2.5 text-gray-400 text-xs">{idx + 1}</td>
                     <td className="px-3 py-2.5 text-gray-500 text-xs">{js.service_date?.slice(0, 10) ?? '-'}</td>
                     <td className="px-3 py-2.5 font-medium">{js.name}</td>

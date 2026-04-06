@@ -23,6 +23,8 @@ const empty: Omit<Employer, 'id' | 'created_at'> = {
   contact_phone: '',
   address: '',
   region: '',
+  job_application_date: null,
+  job_expiry_date: null,
   notes: '',
 }
 
@@ -74,6 +76,8 @@ export default function EmployersPage() {
       contact_phone: emp.contact_phone,
       address: emp.address,
       region: emp.region,
+      job_application_date: emp.job_application_date ?? null,
+      job_expiry_date: emp.job_expiry_date ?? null,
       notes: emp.notes ?? '',
     })
     setEditId(emp.id)
@@ -88,6 +92,8 @@ export default function EmployersPage() {
       구인직무: e.job_duty ?? '',
       구인인원: e.job_count ?? 0,
       구인상태: e.hiring_status ?? '',
+      구인신청일: e.job_application_date ?? '',
+      구인만료일: e.job_expiry_date ?? '',
       담당자: e.contact_name,
       연락처: e.contact_phone,
       지역: e.region,
@@ -101,7 +107,7 @@ export default function EmployersPage() {
   }
 
   function handleTemplateDownload() {
-    const rows = [{ 회사명: '', 업종: '', 사업자등록번호: '', 구인직무: '', 구인인원: 0, 구인상태: '구인중', 담당자: '', 연락처: '', 지역: '', 주소: '', 메모: '' }]
+    const rows = [{ 회사명: '', 업종: '', 사업자등록번호: '', 구인직무: '', 구인인원: 0, 구인상태: '구인중', 구인신청일: '', 구인만료일: '', 담당자: '', 연락처: '', 지역: '', 주소: '', 메모: '' }]
     const ws = XLSX.utils.json_to_sheet(rows)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, '구인처')
@@ -126,6 +132,8 @@ export default function EmployersPage() {
           job_duty: r['구인직무'] ?? '',
           job_count: Number(r['구인인원'] ?? 0),
           hiring_status: r['구인상태'] ?? '구인중',
+          job_application_date: r['구인신청일'] ? String(r['구인신청일']) : null,
+          job_expiry_date: r['구인만료일'] ? String(r['구인만료일']) : null,
           contact_name: r['담당자'] ?? '',
           contact_phone: String(r['연락처'] ?? ''),
           region: r['지역'] ?? '',
@@ -237,6 +245,26 @@ export default function EmployersPage() {
                 ))}
               </div>
             </div>
+            <div>
+              <label className="text-sm text-gray-600 mb-1 block">구인신청일</label>
+              <input type="date"
+                className="w-full border rounded-lg px-3 py-2 text-sm"
+                value={form.job_application_date ?? ''}
+                onChange={(e) => setForm({ ...form, job_application_date: e.target.value || null })} />
+            </div>
+            <div>
+              <label className="text-sm text-gray-600 mb-1 block">구인만료일</label>
+              <div className="flex gap-1.5">
+                <input type="date"
+                  className="flex-1 border rounded-lg px-3 py-2 text-sm"
+                  value={form.job_expiry_date ?? ''}
+                  onChange={(e) => setForm({ ...form, job_expiry_date: e.target.value || null })} />
+                <button type="button" className="px-2.5 py-2 text-xs bg-blue-50 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-100 whitespace-nowrap"
+                  onClick={() => { const d = new Date(form.job_application_date ?? new Date().toISOString().slice(0,10)); d.setMonth(d.getMonth()+3); setForm({...form, job_expiry_date: d.toISOString().slice(0,10)}) }}>3개월</button>
+                <button type="button" className="px-2.5 py-2 text-xs bg-blue-50 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-100 whitespace-nowrap"
+                  onClick={() => { const d = new Date(form.job_application_date ?? new Date().toISOString().slice(0,10)); d.setMonth(d.getMonth()+6); setForm({...form, job_expiry_date: d.toISOString().slice(0,10)}) }}>6개월</button>
+              </div>
+            </div>
             <div className="col-span-2">
               <label className="text-sm text-gray-600 mb-1 block">메모</label>
               <textarea
@@ -263,7 +291,7 @@ export default function EmployersPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-600 sticky top-0 z-10">
               <tr>
-                {['회사명', '업종', '구인직무', '구인인원', '구인상태', '담당자', '연락처', '지역', '관리'].map((h) => (
+                {['회사명', '업종', '구인직무', '구인인원', '구인상태', '구인신청일', '구인만료일', '담당자', '연락처', '지역', '관리'].map((h) => (
                   <th key={h} className="text-left px-4 py-3 font-medium">{h}</th>
                 ))}
               </tr>
@@ -279,6 +307,14 @@ export default function EmployersPage() {
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${emp.hiring_status === '구인중' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
                       {emp.hiring_status || '구인중'}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{emp.job_application_date ?? '-'}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">
+                    {emp.job_expiry_date ? (
+                      <span className={emp.job_expiry_date <= new Date().toISOString().slice(0, 10) ? 'text-red-500 font-medium' : ''}>
+                        {emp.job_expiry_date}
+                      </span>
+                    ) : '-'}
                   </td>
                   <td className="px-4 py-3">{emp.contact_name}</td>
                   <td className="px-4 py-3">{emp.contact_phone}</td>
