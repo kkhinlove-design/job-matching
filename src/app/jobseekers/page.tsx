@@ -41,6 +41,15 @@ function maskRN(rn: string): string {
 }
 
 // ─── 유틸 ──────────────────────────────────────────────────
+// 로컬(KST) 기준 오늘 날짜를 YYYY-MM-DD로 반환 (toISOString은 UTC라 D-1 버그 발생)
+function todayLocal(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
+}
+
 function formatBizReg(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 10)
   if (digits.length <= 3) return digits
@@ -55,7 +64,7 @@ const EMPLOYMENT_TYPE_OPTIONS = ['알선취업', '본인취업']
 type FormData = Omit<JobSeeker, 'id' | 'seq_no' | 'created_at' | 'placement_history'>
 
 const emptyForm: FormData = {
-  service_date: new Date().toISOString().slice(0, 10),
+  service_date: todayLocal(),
   name: '',
   resident_number: '',
   education: '',
@@ -195,7 +204,7 @@ export default function JobSeekersPage() {
       )
       if (!alreadyExists) {
         empHistories.push({
-          employment_date: form.employment_date ?? new Date().toISOString().slice(0, 10),
+          employment_date: form.employment_date ?? todayLocal(),
           resignation_date: '',
           company: form.employment_company,
           employment_type: form.employment_type,
@@ -298,7 +307,7 @@ export default function JobSeekersPage() {
 
   // ─── 알선이력 행 관리 ────────────────────────────────────
   function addPlacement() {
-    setPlacements((prev) => [...prev, { placement_date: new Date().toISOString().slice(0, 10), company: '', business_reg_number: '' }])
+    setPlacements((prev) => [...prev, { placement_date: todayLocal(), company: '', business_reg_number: '' }])
   }
   function removePlacement(idx: number) {
     setPlacements((prev) => prev.filter((_, i) => i !== idx))
@@ -309,7 +318,7 @@ export default function JobSeekersPage() {
 
   // ─── 구직신청이력 행 관리 ──────────────────────────────────
   function addAppHistory() {
-    setAppHistories((prev) => [...prev, { application_date: new Date().toISOString().slice(0, 10), expiry_date: '', application_place: '', job_category: '' }])
+    setAppHistories((prev) => [...prev, { application_date: todayLocal(), expiry_date: '', application_place: '', job_category: '' }])
   }
   function removeAppHistory(idx: number) {
     setAppHistories((prev) => prev.filter((_, i) => i !== idx))
@@ -320,7 +329,7 @@ export default function JobSeekersPage() {
 
   // ─── 취업이력 행 관리 ─────────────────────────────────────
   function addEmpHistory() {
-    setEmpHistories((prev) => [...prev, { employment_date: new Date().toISOString().slice(0, 10), resignation_date: '', company: '', employment_type: '' }])
+    setEmpHistories((prev) => [...prev, { employment_date: todayLocal(), resignation_date: '', company: '', employment_type: '' }])
   }
   function removeEmpHistory(idx: number) {
     setEmpHistories((prev) => prev.filter((_, i) => i !== idx))
@@ -426,7 +435,7 @@ export default function JobSeekersPage() {
 
     // Sheet5: 취업이력 (이미 Sheet2로 있음 — 순서 조정 완료)
 
-    XLSX.writeFile(wb, `구직자_${new Date().toISOString().slice(0, 10)}.xlsx`)
+    XLSX.writeFile(wb, `구직자_${todayLocal()}.xlsx`)
   }
 
   function handleTemplateDownload() {
@@ -449,28 +458,36 @@ export default function JobSeekersPage() {
     setUploadMsg('업로드 중...')
     try {
       const buf = await file.arrayBuffer()
-      const wb = XLSX.read(buf, { cellDates: true })
+      // cellDates를 쓰지 않고 원본값(시리얼/문자열) 그대로 받아 타임존 영향 제거
+      const wb = XLSX.read(buf)
       const ws = wb.Sheets[wb.SheetNames[0]]
-      const rows = XLSX.utils.sheet_to_json<Record<string, string | number | Date>>(ws)
+      const rows = XLSX.utils.sheet_to_json<Record<string, string | number | Date>>(ws, { raw: true })
 
-      function toDateStr(val: string | number | Date | undefined): string | null {
-        if (!val) return null
-        if (val instanceof Date) {
-          // 로컬 타임존 기준으로 날짜 추출 (UTC 변환 시 D-1 방지)
-          const y = val.getFullYear()
-          const m = String(val.getMonth() + 1).padStart(2, '0')
-          const d = String(val.getDate()).padStart(2, '0')
-          return `${y}-${m}-${d}`
-        }
+      function toDateStr(val: string | number | Date | undefined | null): string | null {
+        if (val === null || val === undefined || val === '') return null
+        // 엑셀 시리얼(숫자) → UTC 연산만으로 날짜 추출 (타임존 무관)
         if (typeof val === 'number') {
-          // 엑셀 시리얼 날짜 변환 (로컬 기준)
-          const d = new Date(Math.round((val - 25569) * 86400 * 1000))
+          const ms = Math.round((val - 25569) * 86400 * 1000)
+          const d = new Date(ms)
           const y = d.getUTCFullYear()
           const m = String(d.getUTCMonth() + 1).padStart(2, '0')
           const dd = String(d.getUTCDate()).padStart(2, '0')
           return `${y}-${m}-${dd}`
         }
-        return String(val) || null
+        // Date 객체인 경우도 UTC 기준으로 통일
+        if (val instanceof Date) {
+          const y = val.getUTCFullYear()
+          const m = String(val.getUTCMonth() + 1).padStart(2, '0')
+          const dd = String(val.getUTCDate()).padStart(2, '0')
+          return `${y}-${m}-${dd}`
+        }
+        // 문자열: "YYYY-MM-DD" / "YYYY/MM/DD" / "YYYY.MM.DD" 파싱
+        const s = String(val).trim()
+        const match = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/)
+        if (match) {
+          return `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`
+        }
+        return s || null
       }
 
       const records = rows
