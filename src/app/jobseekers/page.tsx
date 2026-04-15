@@ -693,7 +693,7 @@ export default function JobSeekersPage() {
                   <div className="flex items-center gap-2 h-[38px]">
                     <label className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${form.active ? 'bg-green-50 border-green-300 text-green-700' : 'border-gray-200 text-gray-400'}`}>
                       <input type="checkbox" id="active" checked={form.active}
-                        onChange={(e) => setForm({ ...form, active: e.target.checked, job_category: e.target.checked ? form.job_category : '' })} className="w-4 h-4" />
+                        onChange={(e) => setForm({ ...form, active: e.target.checked })} className="w-4 h-4" />
                       <span className="text-sm font-medium">{form.active ? '구직신청 중' : '미신청'}</span>
                     </label>
                     {form.active && (

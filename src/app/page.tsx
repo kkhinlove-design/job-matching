@@ -123,6 +123,7 @@ export default function Dashboard() {
         { data: expiringSeekersRaw },
         { count: totalPlacementCount },
         { data: expiringEmployersRaw },
+        { data: appHistoryData },
       ] = await Promise.all([
         supabase.from('employers').select('job_count'),
         supabase.from('job_seekers').select('*', { count: 'exact', head: true }),
@@ -142,6 +143,7 @@ export default function Dashboard() {
         supabase.from('employers').select('id, company_name, contact_phone, job_expiry_date, job_duty')
           .not('job_expiry_date', 'is', null).lte('job_expiry_date', today)
           .order('job_expiry_date', { ascending: true }).limit(5),
+        supabase.from('job_application_history').select('job_category'),
       ])
 
       const employers = employersData?.length ?? 0
@@ -151,9 +153,10 @@ export default function Dashboard() {
       const alsenEmployed = seekers.filter((s) => s.employment_type === '알선취업').length
       const bonjinEmployed = seekers.filter((s) => s.employment_type === '본인취업').length
       const activeJobseekers = seekers.filter((s) => s.active).length
-      // 누계: 취업완료 포함하여 카운트
-      const foodCenter = seekers.filter((s) => s.job_category === '식품센터').length
-      const otherCategory = seekers.filter((s) => s.job_category === '그 외').length
+      // 누계: job_application_history 전체 신청건 기준 (취업완료로 바뀌어도 이력은 보존됨)
+      const appHistoryRows = (appHistoryData ?? []) as { job_category: string | null }[]
+      const foodCenter = appHistoryRows.filter((r) => r.job_category === '식품센터').length
+      const otherCategory = appHistoryRows.filter((r) => r.job_category === '그 외').length
 
       const postRows = postingsData ?? []
       const todayPostings = postRows.filter((r) => r.collected_at?.slice(0, 10) === today).length
