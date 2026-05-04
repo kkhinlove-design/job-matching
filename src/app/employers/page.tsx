@@ -211,95 +211,140 @@ export default function EmployersPage() {
       )}
 
       {showForm && (
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <h3 className="font-semibold mb-4">{editId ? '구인처 수정' : '구인처 등록'}</h3>
-          <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-            {[
-              { label: '회사명', key: 'company_name', required: true },
-              { label: '업종', key: 'business_type' },
-              { label: '담당자', key: 'contact_name' },
-              { label: '연락처', key: 'contact_phone' },
-              { label: '지역', key: 'region' },
-              { label: '주소', key: 'address' },
-            ].map(({ label, key, required }) => (
-              <div key={key}>
-                <label className="text-sm text-gray-600 mb-1 block">{label}</label>
-                <input
-                  className="w-full border rounded-lg px-3 py-2 text-sm"
-                  value={(form as Record<string, unknown>)[key] as string}
-                  onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                  required={required}
-                />
+        <div className="bg-gray-50 rounded-xl border border-gray-200 p-5 mb-6">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-6 rounded bg-orange-500 inline-block" />
+              <h3 className="font-bold text-gray-800 text-base">{editId ? '구인처 수정' : '구인처 등록'}</h3>
+            </div>
+            <button type="button" onClick={() => setShowForm(false)}
+              className="text-gray-400 hover:text-gray-600 text-xl leading-none px-1">×</button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+
+            {/* ── 1. 기본 정보 ── */}
+            <div className="bg-white rounded-xl border border-blue-100 overflow-hidden">
+              <div className="flex items-center gap-2.5 px-4 py-2.5 bg-blue-50 border-b border-blue-100">
+                <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center font-bold shrink-0">1</span>
+                <span className="text-sm font-semibold text-blue-700">기본 정보</span>
+                <span className="ml-auto text-xs text-blue-400">* 필수항목</span>
               </div>
-            ))}
-            <div>
-              <label className="text-sm text-gray-600 mb-1 block">사업자등록번호</label>
-              <input
-                className="w-full border rounded-lg px-3 py-2 text-sm"
-                placeholder="000-00-00000"
-                value={form.business_reg_number}
-                onChange={(e) => setForm({ ...form, business_reg_number: formatBizReg(e.target.value) })}
-              />
-            </div>
-            <div>
-              <label className="text-sm text-gray-600 mb-1 block">구인직무</label>
-              <input
-                className="w-full border rounded-lg px-3 py-2 text-sm"
-                placeholder="예) 조리원, 요양보호사"
-                value={form.job_duty}
-                onChange={(e) => setForm({ ...form, job_duty: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="text-sm text-gray-600 mb-1 block">구인인원</label>
-              <input
-                type="number" min={0}
-                className="w-full border rounded-lg px-3 py-2 text-sm"
-                value={form.job_count}
-                onChange={(e) => setForm({ ...form, job_count: Number(e.target.value) })}
-              />
-            </div>
-            <div>
-              <label className="text-sm text-gray-600 mb-1 block">구인상태</label>
-              <div className="flex gap-3 h-[38px] items-center">
-                {['구인중', '만료'].map((s) => (
-                  <label key={s} className="flex items-center gap-1.5 cursor-pointer">
-                    <input type="radio" name="hiring_status" value={s}
-                      checked={form.hiring_status === s}
-                      onChange={() => setForm({ ...form, hiring_status: s })}
-                      className="w-4 h-4" />
-                    <span className="text-sm text-gray-700">{s}</span>
-                  </label>
-                ))}
+              <div className="p-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">회사명 <span className="text-red-400">*</span></label>
+                  <input required className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                    value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">업종</label>
+                  <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                    value={form.business_type} onChange={(e) => setForm({ ...form, business_type: e.target.value })} />
+                </div>
+                <div className="lg:col-span-2">
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">사업자등록번호</label>
+                  <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                    placeholder="000-00-00000" value={form.business_reg_number}
+                    onChange={(e) => setForm({ ...form, business_reg_number: formatBizReg(e.target.value) })} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">담당자</label>
+                  <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                    value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">연락처</label>
+                  <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                    placeholder="010-0000-0000" value={form.contact_phone}
+                    onChange={(e) => setForm({ ...form, contact_phone: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">지역</label>
+                  <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                    value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">주소</label>
+                  <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                    value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+                </div>
               </div>
             </div>
-            <div>
-              <label className="text-sm text-gray-600 mb-1 block">구인신청일</label>
-              <input type="date"
-                className="w-full border rounded-lg px-3 py-2 text-sm"
-                value={form.job_application_date ?? ''}
-                onChange={(e) => setForm({ ...form, job_application_date: e.target.value || null })} />
-            </div>
-            <div>
-              <label className="text-sm text-gray-600 mb-1 block">구인만료일</label>
-              <div className="flex gap-1.5">
-                <input type="date"
-                  className="flex-1 border rounded-lg px-3 py-2 text-sm"
-                  value={form.job_expiry_date ?? ''}
-                  onChange={(e) => setForm({ ...form, job_expiry_date: e.target.value || null })} />
-                <button type="button" className="px-2.5 py-2 text-xs bg-blue-50 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-100 whitespace-nowrap"
-                  onClick={() => setForm({ ...form, job_expiry_date: addMonthsExpiry(form.job_application_date, 3) })}>3개월</button>
-                <button type="button" className="px-2.5 py-2 text-xs bg-blue-50 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-100 whitespace-nowrap"
-                  onClick={() => setForm({ ...form, job_expiry_date: addMonthsExpiry(form.job_application_date, 6) })}>6개월</button>
+
+            {/* ── 2. 구인 정보 ── */}
+            <div className="bg-white rounded-xl border border-green-100 overflow-hidden">
+              <div className="flex items-center gap-2.5 px-4 py-2.5 bg-green-50 border-b border-green-100">
+                <span className="w-5 h-5 rounded-full bg-green-500 text-white text-xs flex items-center justify-center font-bold shrink-0">2</span>
+                <span className="text-sm font-semibold text-green-700">구인 정보</span>
+                {form.hiring_status && (
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${form.hiring_status === '구인중' ? 'bg-green-200 text-green-800' : 'bg-gray-200 text-gray-600'}`}>{form.hiring_status}</span>
+                )}
+              </div>
+              <div className="p-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="lg:col-span-2">
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">구인직무</label>
+                  <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-400 outline-none"
+                    placeholder="예) 조리원, 요양보호사" value={form.job_duty}
+                    onChange={(e) => setForm({ ...form, job_duty: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">구인인원</label>
+                  <input type="number" min={0}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-400 outline-none"
+                    value={form.job_count} onChange={(e) => setForm({ ...form, job_count: Number(e.target.value) })} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">구인상태</label>
+                  <div className="flex gap-2 h-[38px] items-center">
+                    {['구인중', '만료'].map((s) => (
+                      <label key={s} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer text-sm transition-colors ${form.hiring_status === s ? (s === '구인중' ? 'bg-green-100 border-green-400 text-green-700 font-medium' : 'bg-gray-100 border-gray-400 text-gray-700 font-medium') : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                        <input type="radio" name="hiring_status" value={s}
+                          checked={form.hiring_status === s}
+                          onChange={() => setForm({ ...form, hiring_status: s })}
+                          className="w-3.5 h-3.5" />
+                        {s}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">구인신청일</label>
+                  <input type="date"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-400 outline-none"
+                    value={form.job_application_date ?? ''}
+                    onChange={(e) => setForm({ ...form, job_application_date: e.target.value || null })} />
+                </div>
+                <div className="lg:col-span-3">
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">구인만료일</label>
+                  <div className="flex gap-1.5">
+                    <input type="date"
+                      className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-400 outline-none"
+                      value={form.job_expiry_date ?? ''}
+                      onChange={(e) => setForm({ ...form, job_expiry_date: e.target.value || null })} />
+                    <button type="button" className="px-2.5 py-2 text-xs bg-green-50 border border-green-200 text-green-600 rounded-lg hover:bg-green-100 whitespace-nowrap"
+                      onClick={() => setForm({ ...form, job_expiry_date: addMonthsExpiry(form.job_application_date, 3) })}>3개월</button>
+                    <button type="button" className="px-2.5 py-2 text-xs bg-green-50 border border-green-200 text-green-600 rounded-lg hover:bg-green-100 whitespace-nowrap"
+                      onClick={() => setForm({ ...form, job_expiry_date: addMonthsExpiry(form.job_application_date, 6) })}>6개월</button>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="col-span-2">
-              <label className="text-sm text-gray-600 mb-1 block">참여 지원사업 <span className="text-xs text-gray-400 font-normal">(중복 선택 가능)</span></label>
-              <div className="flex flex-wrap gap-2">
+
+            {/* ── 3. 참여 지원사업 ── */}
+            <div className="bg-white rounded-xl border border-rose-100 overflow-hidden">
+              <div className="flex items-center gap-2.5 px-4 py-2.5 bg-rose-50 border-b border-rose-100">
+                <span className="w-5 h-5 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center font-bold shrink-0">3</span>
+                <span className="text-sm font-semibold text-rose-700">참여 지원사업</span>
+                <span className="text-xs text-rose-400">중복 선택 가능</span>
+                {(form.support_programs ?? []).length > 0 && (
+                  <span className="ml-auto px-2 py-0.5 rounded-full text-xs bg-rose-200 text-rose-800 font-medium">{(form.support_programs ?? []).length}건 참여</span>
+                )}
+              </div>
+              <div className="p-4 flex flex-wrap gap-2">
                 {SUPPORT_PROGRAMS.map((p) => {
                   const checked = (form.support_programs ?? []).includes(p)
                   return (
-                    <label key={p} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border cursor-pointer text-sm transition-colors ${checked ? 'bg-blue-50 border-blue-400 text-blue-700 font-medium' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                    <label key={p} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border cursor-pointer text-sm transition-colors ${checked ? 'bg-rose-100 border-rose-400 text-rose-700 font-medium' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
                       <input type="checkbox" className="w-4 h-4"
                         checked={checked}
                         onChange={(e) => {
@@ -312,18 +357,19 @@ export default function EmployersPage() {
                 })}
               </div>
             </div>
-            <div className="col-span-2">
-              <label className="text-sm text-gray-600 mb-1 block">메모</label>
-              <textarea
-                className="w-full border rounded-lg px-3 py-2 text-sm"
-                rows={2}
-                value={form.notes ?? ''}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              />
+
+            {/* 메모 */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <label className="text-xs font-medium text-gray-500 mb-2 block">메모</label>
+              <textarea className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-gray-400 outline-none resize-none" rows={2}
+                value={form.notes ?? ''} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
-            <div className="col-span-2 flex gap-2 justify-end">
-              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50">취소</button>
-              <button type="submit" className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">저장</button>
+
+            <div className="flex gap-2 justify-end">
+              <button type="button" onClick={() => setShowForm(false)}
+                className="px-5 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600">취소</button>
+              <button type="submit"
+                className="px-7 py-2 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium">저장</button>
             </div>
           </form>
         </div>
