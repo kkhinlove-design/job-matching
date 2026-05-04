@@ -381,51 +381,65 @@ export default function EmployersPage() {
         ) : list.length === 0 ? (
           <p className="p-6 text-gray-500">등록된 구인처가 없습니다.</p>
         ) : (
-          <table className="text-sm whitespace-nowrap">
+          <table className="text-sm tracking-tight table-fixed" style={{ width: '1200px' }}>
+            <colgroup>
+              <col style={{ width: 140 }} />
+              <col style={{ width: 100 }} />
+              <col style={{ width: 140 }} />
+              <col style={{ width: 64 }} />
+              <col style={{ width: 76 }} />
+              <col style={{ width: 96 }} />
+              <col style={{ width: 96 }} />
+              <col style={{ width: 220 }} />
+              <col style={{ width: 72 }} />
+              <col style={{ width: 110 }} />
+              <col style={{ width: 96 }} />
+              <col style={{ width: 90 }} />
+            </colgroup>
             <thead className="bg-gray-50 text-gray-600 sticky top-0 z-10">
               <tr>
                 {['회사명', '업종', '구인직무', '구인인원', '구인상태', '구인신청일', '구인만료일', '지원사업', '담당자', '연락처', '지역', '관리'].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 font-medium">{h}</th>
+                  <th key={h} className="text-left px-2 py-3 font-medium text-xs">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {list.map((emp) => (
                 <tr key={emp.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium">{emp.company_name}</td>
-                  <td className="px-4 py-3 text-gray-600">{emp.business_type || '-'}</td>
-                  <td className="px-4 py-3 text-gray-600">{emp.job_duty || '-'}</td>
-                  <td className="px-4 py-3 text-gray-600">{emp.job_count ? `${emp.job_count}명` : '-'}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${emp.hiring_status === '구인중' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                  <td className="px-2 py-3 font-medium truncate" title={emp.company_name}>{emp.company_name}</td>
+                  <td className="px-2 py-3 text-gray-600 text-xs truncate" title={emp.business_type ?? ''}>{emp.business_type || '-'}</td>
+                  <td className="px-2 py-3 text-gray-600 text-xs truncate" title={emp.job_duty ?? ''}>{emp.job_duty || '-'}</td>
+                  <td className="px-2 py-3 text-gray-600 text-xs">{emp.job_count ? `${emp.job_count}명` : '-'}</td>
+                  <td className="px-2 py-3">
+                    <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-medium ${emp.hiring_status === '구인중' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
                       {emp.hiring_status || '구인중'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{emp.job_application_date ?? '-'}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">
+                  <td className="px-2 py-3 text-gray-500 text-xs truncate">{emp.job_application_date ?? '-'}</td>
+                  <td className="px-2 py-3 text-gray-500 text-xs truncate">
                     {emp.job_expiry_date ? (
                       <span className={emp.job_expiry_date <= new Date().toISOString().slice(0, 10) ? 'text-red-500 font-medium' : ''}>
                         {emp.job_expiry_date}
                       </span>
                     ) : '-'}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-2 py-3">
                     {(emp.support_programs ?? []).length === 0 ? (
                       <span className="text-gray-300 text-xs">-</span>
                     ) : (
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-1" title={(emp.support_programs ?? []).join(', ')}>
                         {(emp.support_programs ?? []).map((p) => (
-                          <span key={p} className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-[11px] whitespace-nowrap">{p}</span>
+                          <span key={p} className="px-1 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px] whitespace-nowrap">{p}</span>
                         ))}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3">{emp.contact_name}</td>
-                  <td className="px-4 py-3">{emp.contact_phone}</td>
-                  <td className="px-4 py-3">{emp.region}</td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => handleEdit(emp)} className="text-blue-600 hover:underline mr-3">수정</button>
-                    <button onClick={() => handleDelete(emp.id)} className="text-red-500 hover:underline">삭제</button>
+                  <td className="px-2 py-3 text-xs truncate">{emp.contact_name}</td>
+                  <td className="px-2 py-3 text-xs">{emp.contact_phone}</td>
+                  <td className="px-2 py-3 text-xs truncate" title={emp.region ?? ''}>{emp.region}</td>
+                  <td className="px-2 py-3">
+                    <button onClick={() => handleEdit(emp)} className="text-blue-600 hover:underline mr-2 text-xs">수정</button>
+                    <button onClick={() => handleDelete(emp.id)} className="text-red-500 hover:underline text-xs">삭제</button>
                   </td>
                 </tr>
               ))}

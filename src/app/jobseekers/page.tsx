@@ -1031,17 +1031,36 @@ export default function JobSeekersPage() {
         ) : filtered.length === 0 ? (
           <p className="p-6 text-gray-500">등록된 구직자가 없습니다.</p>
         ) : (
-          <table className="text-sm whitespace-nowrap">
+          <table className="text-sm tracking-tight table-fixed" style={{ width: '1380px' }}>
+            <colgroup>
+              <col style={{ width: 36 }} />
+              <col style={{ width: 44 }} />
+              <col style={{ width: 92 }} />
+              <col style={{ width: 72 }} />
+              <col style={{ width: 44 }} />
+              <col style={{ width: 56 }} />
+              <col style={{ width: 72 }} />
+              <col style={{ width: 116 }} />
+              <col style={{ width: 96 }} />
+              <col style={{ width: 110 }} />
+              <col style={{ width: 64 }} />
+              <col style={{ width: 80 }} />
+              <col style={{ width: 120 }} />
+              <col style={{ width: 64 }} />
+              <col style={{ width: 200 }} />
+              <col style={{ width: 64 }} />
+              <col style={{ width: 80 }} />
+            </colgroup>
             <thead className="bg-gray-50 text-gray-600 sticky top-0 z-10">
               <tr>
-                <th className="px-3 py-3 w-8">
+                <th className="px-2 py-3">
                   <input type="checkbox" className="w-4 h-4 rounded"
                     checked={filtered.length > 0 && selectedIds.size === filtered.length}
                     onChange={toggleSelectAll} />
                 </th>
                 {['연번', '서비스신청일', '이름', '성별', '만나이', '최종학력', '휴대폰', '거주지',
                   '구직신청', '알선횟수', '취업형태', '취업처', '취업횟수', '장려금', '담당자', '관리'].map((h) => (
-                  <th key={h} className="text-left px-3 py-3 font-medium">{h}</th>
+                  <th key={h} className="text-left px-2 py-3 font-medium text-xs">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -1054,72 +1073,72 @@ export default function JobSeekersPage() {
                 const appHistoryCount = js.job_application_history?.length ?? 0
                 return (
                   <tr key={js.id} className={`hover:bg-gray-50 ${selectedIds.has(js.id) ? 'bg-blue-50' : ''}`}>
-                    <td className="px-3 py-2.5">
+                    <td className="px-2 py-2.5">
                       <input type="checkbox" className="w-4 h-4 rounded"
                         checked={selectedIds.has(js.id)}
                         onChange={() => toggleSelect(js.id)} />
                     </td>
-                    <td className="px-3 py-2.5 text-gray-400 text-xs">{idx + 1}</td>
-                    <td className="px-3 py-2.5 text-gray-500 text-xs">{js.service_date?.slice(0, 10) ?? '-'}</td>
-                    <td className="px-3 py-2.5 font-medium">{js.name}</td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-2 py-2.5 text-gray-400 text-xs">{idx + 1}</td>
+                    <td className="px-2 py-2.5 text-gray-500 text-xs truncate">{js.service_date?.slice(0, 10) ?? '-'}</td>
+                    <td className="px-2 py-2.5 font-medium truncate" title={js.name}>{js.name}</td>
+                    <td className="px-2 py-2.5">
                       {gender && (
                         <span className={`px-1.5 py-0.5 rounded text-xs ${gender === '남' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600'}`}>
                           {gender}
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-2.5 text-gray-600">{age !== null ? `${age}세` : '-'}</td>
-                    <td className="px-3 py-2.5 text-gray-500">{js.education || '-'}</td>
-                    <td className="px-3 py-2.5">{js.phone}</td>
-                    <td className="px-3 py-2.5 text-gray-500">{js.region || '-'}</td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`px-2 py-0.5 rounded-full text-xs ${js.active ? 'bg-green-100 text-green-700' : js.employment_type ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'}`}>
+                    <td className="px-2 py-2.5 text-gray-600 text-xs">{age !== null ? `${age}세` : '-'}</td>
+                    <td className="px-2 py-2.5 text-gray-500 text-xs truncate">{js.education || '-'}</td>
+                    <td className="px-2 py-2.5 text-xs">{js.phone}</td>
+                    <td className="px-2 py-2.5 text-gray-500 text-xs truncate" title={js.region}>{js.region || '-'}</td>
+                    <td className="px-2 py-2.5">
+                      <div className="flex items-center gap-1">
+                        <span className={`px-1.5 py-0.5 rounded-full text-[11px] ${js.active ? 'bg-green-100 text-green-700' : js.employment_type ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'}`}>
                           {js.active ? '신청중' : js.employment_type ? '취업완료' : '미신청'}
                         </span>
                         {appHistoryCount > 0 && (
-                          <span className="px-1.5 py-0.5 bg-sky-100 text-sky-600 rounded-full text-xs font-medium">{appHistoryCount}회</span>
+                          <span className="px-1 py-0.5 bg-sky-100 text-sky-600 rounded-full text-[11px] font-medium">{appHistoryCount}회</span>
                         )}
                       </div>
                     </td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-2 py-2.5">
                       {placementCount > 0 ? (
-                        <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
+                        <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-[11px] font-medium">
                           {placementCount}회
                         </span>
                       ) : <span className="text-gray-300 text-xs">-</span>}
                     </td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-2 py-2.5">
                       {js.employment_type === '알선취업' ? (
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-indigo-100 text-indigo-700 font-medium">알선취업</span>
+                        <span className="px-1.5 py-0.5 rounded-full text-[11px] bg-indigo-100 text-indigo-700 font-medium">알선취업</span>
                       ) : js.employment_type === '본인취업' ? (
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-teal-100 text-teal-700 font-medium">본인취업</span>
+                        <span className="px-1.5 py-0.5 rounded-full text-[11px] bg-teal-100 text-teal-700 font-medium">본인취업</span>
                       ) : (
                         <span className="text-gray-300 text-xs">-</span>
                       )}
                     </td>
-                    <td className="px-3 py-2.5 text-gray-500">{js.employment_company || '-'}</td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-2 py-2.5 text-gray-500 text-xs truncate" title={js.employment_company ?? ''}>{js.employment_company || '-'}</td>
+                    <td className="px-2 py-2.5">
                       {empHistoryCount > 0 ? (
-                        <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                        <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full text-[11px] font-medium">
                           {empHistoryCount}회
                         </span>
                       ) : <span className="text-gray-300 text-xs">-</span>}
                     </td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-2 py-2.5">
                       {(js.incentives ?? []).length === 0 ? (
                         <span className="text-gray-300 text-xs">-</span>
                       ) : (
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-1" title={(js.incentives ?? []).join(', ')}>
                           {(js.incentives ?? []).map((p) => (
-                            <span key={p} className="px-1.5 py-0.5 bg-rose-50 text-rose-700 rounded text-[11px] whitespace-nowrap">{p}</span>
+                            <span key={p} className="px-1 py-0.5 bg-rose-50 text-rose-700 rounded text-[10px] whitespace-nowrap">{p}</span>
                           ))}
                         </div>
                       )}
                     </td>
-                    <td className="px-3 py-2.5 text-gray-500">{js.manager_name || '-'}</td>
-                    <td className="px-3 py-2.5 flex gap-2">
+                    <td className="px-2 py-2.5 text-gray-500 text-xs truncate">{js.manager_name || '-'}</td>
+                    <td className="px-2 py-2.5 flex gap-1.5">
                       <button onClick={() => openEdit(js)} className="text-blue-600 hover:underline text-xs">수정</button>
                       <button onClick={() => handleDelete(js.id)} className="text-red-500 hover:underline text-xs">삭제</button>
                     </td>
