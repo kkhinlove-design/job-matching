@@ -381,7 +381,7 @@ export default function EmployersPage() {
         ) : list.length === 0 ? (
           <p className="p-6 text-gray-500">등록된 구인처가 없습니다.</p>
         ) : (
-          <table className="text-sm tracking-tight table-fixed" style={{ width: '1200px' }}>
+          <table className="text-sm tracking-tight table-fixed w-full" style={{ minWidth: '1200px' }}>
             <colgroup>
               <col style={{ width: 140 }} />
               <col style={{ width: 100 }} />
