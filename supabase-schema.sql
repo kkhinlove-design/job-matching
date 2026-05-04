@@ -113,3 +113,11 @@ create index on match_results(jobseeker_id);
 -- =============================================
 -- alter table employers add column if not exists job_application_date date;
 -- alter table employers add column if not exists job_expiry_date date;
+
+-- =============================================
+-- 장려금/지원사업 컬럼 추가 (2026-05)
+-- 구직자: 채움프로젝트/청년 버팀목/새싹정착/보건증발급/복리후생 (다중)
+-- 구인처: 채움프로젝트/고용환경개선/재직자 직무스트레스 관리/일손든든 (다중)
+-- =============================================
+-- alter table job_seekers add column if not exists incentives text[] default '{}';
+-- alter table employers  add column if not exists support_programs text[] default '{}';

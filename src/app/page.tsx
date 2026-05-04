@@ -218,7 +218,7 @@ export default function Dashboard() {
 
       {/* 주요 통계 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="구인처" value={s.employers} sub={`구인인원 전체 ${s.totalJobCount}명`} href="/employers" colorClass="text-blue-600" />
+        <StatCard label="구인인원" value={`${s.totalJobCount}명`} sub={`구인처 ${s.employers}곳`} href="/employers" colorClass="text-blue-600" />
         <StatCard label="활동 구직자" value={s.activeJobseekers} sub={`전체 ${s.totalJobseekers}명`} href="/jobseekers" colorClass="text-green-600" />
         <StatCard label="진행중 공고" value={s.activePostings} sub={`전체 ${s.totalPostings}건 · 오늘 ${s.todayPostings}건`} href="/postings" colorClass="text-yellow-600" />
         <StatCard label="미발송 매칭" value={s.pendingMatches} sub={`누적 발송 ${s.sentMatches}건`} href="/matching" colorClass={s.pendingMatches > 0 ? 'text-red-500' : 'text-gray-600'} />

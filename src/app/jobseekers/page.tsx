@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx'
 import { supabase } from '@/lib/supabase'
 import { JobSeeker, PlacementHistory, EmploymentHistory, JobApplicationHistory } from '@/types'
 import { useAuth } from '@/components/AuthProvider'
+import { addMonthsExpiry } from '@/lib/date'
 
 // ─── 주민등록번호 유틸 ───────────────────────────────────────
 function calcAge(rn: string): number | null {
@@ -60,6 +61,7 @@ function formatBizReg(value: string): string {
 // ─── 상수 ──────────────────────────────────────────────────
 const EDUCATION_OPTIONS = ['무학', '초졸', '중졸', '고졸', '전문대졸', '대졸', '대학원졸']
 const EMPLOYMENT_TYPE_OPTIONS = ['알선취업', '본인취업']
+const INCENTIVES = ['채움프로젝트', '청년 버팀목', '새싹정착', '보건증발급', '복리후생']
 
 type FormData = Omit<JobSeeker, 'id' | 'seq_no' | 'created_at' | 'placement_history'>
 
@@ -85,6 +87,7 @@ const emptyForm: FormData = {
   employment_date: null,
   employment_company: '',
   business_reg_number: '',
+  incentives: [],
   notes: '',
 }
 
@@ -162,6 +165,7 @@ export default function JobSeekersPage() {
       employment_date: js.employment_date ?? null,
       employment_company: js.employment_company ?? '',
       business_reg_number: js.business_reg_number ?? '',
+      incentives: js.incentives ?? [],
       notes: js.notes ?? '',
     })
     setPlacements(
@@ -343,35 +347,51 @@ export default function JobSeekersPage() {
     const wb = XLSX.utils.book_new()
 
     // Sheet1: 구직자 기본 정보
-    const mainRows = list.map((js, idx) => ({
-      연번: idx + 1,
-      서비스신청일: js.service_date ?? '',
-      구직신청일: js.job_application_date ?? '',
-      구직기간만료일: js.job_expiry_date ?? '',
-      구직자구분: js.job_category ?? '',
-      이름: js.name,
-      주민등록번호: js.resident_number ?? '',
-      성별: calcGender(js.resident_number ?? ''),
-      만나이: calcAge(js.resident_number ?? '') ?? '',
-      최종학력: js.education ?? '',
-      휴대폰번호: js.phone,
-      거주지: js.region,
-      구직신청여부: js.active ? 'Y' : 'N',
-      구직신청처: js.job_application_place ?? '',
-      담당자: js.manager_name ?? '',
-      희망직종: js.desired_job,
-      경력: js.career_years,
-      '희망급여(만원)': js.desired_salary ?? '',
-      자격증: js.certifications ?? '',
-      알선횟수: js.placement_history?.length ?? 0,
-      취업횟수: js.employment_history?.length ?? 0,
-      현재취업형태: js.employment_type ?? '',
-      현재취업일자: js.employment_date ?? '',
-      현재취업처: js.employment_company ?? '',
-      현재사업자등록번호: js.business_reg_number ?? '',
-      메모: js.notes ?? '',
-    }))
+    const mainRows = list.map((js, idx) => {
+      const incs = js.incentives ?? []
+      const row: Record<string, string | number> = {
+        연번: idx + 1,
+        서비스신청일: js.service_date ?? '',
+        구직신청일: js.job_application_date ?? '',
+        구직기간만료일: js.job_expiry_date ?? '',
+        구직자구분: js.job_category ?? '',
+        이름: js.name,
+        주민등록번호: js.resident_number ?? '',
+        성별: calcGender(js.resident_number ?? ''),
+        만나이: calcAge(js.resident_number ?? '') ?? '',
+        최종학력: js.education ?? '',
+        휴대폰번호: js.phone,
+        거주지: js.region,
+        구직신청여부: js.active ? 'Y' : 'N',
+        구직신청처: js.job_application_place ?? '',
+        담당자: js.manager_name ?? '',
+        희망직종: js.desired_job,
+        경력: js.career_years,
+        '희망급여(만원)': js.desired_salary ?? '',
+        자격증: js.certifications ?? '',
+        알선횟수: js.placement_history?.length ?? 0,
+        취업횟수: js.employment_history?.length ?? 0,
+        현재취업형태: js.employment_type ?? '',
+        현재취업일자: js.employment_date ?? '',
+        현재취업처: js.employment_company ?? '',
+        현재사업자등록번호: js.business_reg_number ?? '',
+      }
+      for (const p of INCENTIVES) row[`장려금_${p}`] = incs.includes(p) ? 'Y' : ''
+      row['장려금수령건수'] = incs.length
+      row['메모'] = js.notes ?? ''
+      return row
+    })
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mainRows), '구직자')
+
+    // 장려금 집계 시트
+    const incentiveSummary: Record<string, string | number>[] = INCENTIVES.map((p) => ({
+      장려금: p,
+      수령자수: list.filter((js) => (js.incentives ?? []).includes(p)).length,
+    }))
+    const multiCount = list.filter((js) => (js.incentives ?? []).length >= 2).length
+    incentiveSummary.push({ 장려금: '2개이상 수령자', 수령자수: multiCount })
+    incentiveSummary.push({ 장려금: '미수령', 수령자수: list.filter((js) => !(js.incentives ?? []).length).length })
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(incentiveSummary), '장려금집계')
 
     // Sheet2: 취업이력 전체
     const empRows: Record<string, unknown>[] = []
@@ -622,9 +642,9 @@ export default function JobSeekersPage() {
                       value={form.job_expiry_date ?? ''}
                       onChange={(e) => setForm({ ...form, job_expiry_date: e.target.value || null })} />
                     <button type="button" className="px-2.5 py-2 text-xs bg-blue-50 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-100 whitespace-nowrap"
-                      onClick={() => { const d = new Date(form.job_application_date ?? new Date().toISOString().slice(0,10)); d.setMonth(d.getMonth()+3); setForm({...form, job_expiry_date: d.toISOString().slice(0,10)}) }}>3개월</button>
+                      onClick={() => setForm({ ...form, job_expiry_date: addMonthsExpiry(form.job_application_date, 3) })}>3개월</button>
                     <button type="button" className="px-2.5 py-2 text-xs bg-blue-50 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-100 whitespace-nowrap"
-                      onClick={() => { const d = new Date(form.job_application_date ?? new Date().toISOString().slice(0,10)); d.setMonth(d.getMonth()+6); setForm({...form, job_expiry_date: d.toISOString().slice(0,10)}) }}>6개월</button>
+                      onClick={() => setForm({ ...form, job_expiry_date: addMonthsExpiry(form.job_application_date, 6) })}>6개월</button>
                   </div>
                 </div>
                 <div>
@@ -765,9 +785,9 @@ export default function JobSeekersPage() {
                           <input type="date" className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm"
                             value={h.expiry_date} onChange={(e) => updateAppHistory(idx, 'expiry_date', e.target.value)} />
                           <button type="button" className="px-2 py-1.5 text-xs bg-sky-100 border border-sky-200 text-sky-600 rounded-lg hover:bg-sky-200 whitespace-nowrap"
-                            onClick={() => { const d = new Date(h.application_date); d.setMonth(d.getMonth()+3); updateAppHistory(idx, 'expiry_date', d.toISOString().slice(0,10)) }}>3개월</button>
+                            onClick={() => updateAppHistory(idx, 'expiry_date', addMonthsExpiry(h.application_date, 3))}>3개월</button>
                           <button type="button" className="px-2 py-1.5 text-xs bg-sky-100 border border-sky-200 text-sky-600 rounded-lg hover:bg-sky-200 whitespace-nowrap"
-                            onClick={() => { const d = new Date(h.application_date); d.setMonth(d.getMonth()+6); updateAppHistory(idx, 'expiry_date', d.toISOString().slice(0,10)) }}>6개월</button>
+                            onClick={() => updateAppHistory(idx, 'expiry_date', addMonthsExpiry(h.application_date, 6))}>6개월</button>
                         </div>
                         <input className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm min-w-[100px]" placeholder="신청처"
                           value={h.application_place} onChange={(e) => updateAppHistory(idx, 'application_place', e.target.value)} />
@@ -927,6 +947,34 @@ export default function JobSeekersPage() {
               </div>
             </div>
 
+            {/* ── 7. 장려금 지원 ── */}
+            <div className="bg-white rounded-xl border border-rose-100 overflow-hidden">
+              <div className="flex items-center gap-2.5 px-4 py-2.5 bg-rose-50 border-b border-rose-100">
+                <span className="w-5 h-5 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center font-bold shrink-0">7</span>
+                <span className="text-sm font-semibold text-rose-700">장려금 지원</span>
+                <span className="text-xs text-rose-400">중복 선택 가능</span>
+                {(form.incentives ?? []).length > 0 && (
+                  <span className="ml-auto px-2 py-0.5 rounded-full text-xs bg-rose-200 text-rose-800 font-medium">{(form.incentives ?? []).length}건 수령</span>
+                )}
+              </div>
+              <div className="p-4 flex flex-wrap gap-2">
+                {INCENTIVES.map((p) => {
+                  const checked = (form.incentives ?? []).includes(p)
+                  return (
+                    <label key={p} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border cursor-pointer text-sm transition-colors ${checked ? 'bg-rose-100 border-rose-400 text-rose-700 font-medium' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                      <input type="checkbox" className="w-4 h-4"
+                        checked={checked}
+                        onChange={(e) => {
+                          const cur = form.incentives ?? []
+                          setForm({ ...form, incentives: e.target.checked ? [...cur, p] : cur.filter((x) => x !== p) })
+                        }} />
+                      {p}
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+
             {/* 메모 */}
             <div className="bg-white rounded-xl border border-gray-200 p-4">
               <label className="text-xs font-medium text-gray-500 mb-2 block">메모</label>
@@ -992,7 +1040,7 @@ export default function JobSeekersPage() {
                     onChange={toggleSelectAll} />
                 </th>
                 {['연번', '서비스신청일', '이름', '성별', '만나이', '최종학력', '휴대폰', '거주지',
-                  '구직신청', '알선횟수', '취업형태', '취업처', '취업횟수', '담당자', '관리'].map((h) => (
+                  '구직신청', '알선횟수', '취업형태', '취업처', '취업횟수', '장려금', '담당자', '관리'].map((h) => (
                   <th key={h} className="text-left px-3 py-3 font-medium">{h}</th>
                 ))}
               </tr>
@@ -1058,6 +1106,17 @@ export default function JobSeekersPage() {
                           {empHistoryCount}회
                         </span>
                       ) : <span className="text-gray-300 text-xs">-</span>}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {(js.incentives ?? []).length === 0 ? (
+                        <span className="text-gray-300 text-xs">-</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {(js.incentives ?? []).map((p) => (
+                            <span key={p} className="px-1.5 py-0.5 bg-rose-50 text-rose-700 rounded text-[11px] whitespace-nowrap">{p}</span>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className="px-3 py-2.5 text-gray-500">{js.manager_name || '-'}</td>
                     <td className="px-3 py-2.5 flex gap-2">

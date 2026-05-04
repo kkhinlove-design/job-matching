@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { supabase } from '@/lib/supabase'
 import { Employer } from '@/types'
+import { addMonthsExpiry, excelToDateStr } from '@/lib/date'
 
 function formatBizReg(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 10)
@@ -11,6 +12,8 @@ function formatBizReg(value: string): string {
   if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`
   return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`
 }
+
+const SUPPORT_PROGRAMS = ['채움프로젝트', '고용환경개선', '재직자 직무스트레스 관리', '일손든든']
 
 const empty: Omit<Employer, 'id' | 'created_at'> = {
   company_name: '',
@@ -25,6 +28,7 @@ const empty: Omit<Employer, 'id' | 'created_at'> = {
   region: '',
   job_application_date: null,
   job_expiry_date: null,
+  support_programs: [],
   notes: '',
 }
 
@@ -78,6 +82,7 @@ export default function EmployersPage() {
       region: emp.region,
       job_application_date: emp.job_application_date ?? null,
       job_expiry_date: emp.job_expiry_date ?? null,
+      support_programs: emp.support_programs ?? [],
       notes: emp.notes ?? '',
     })
     setEditId(emp.id)
@@ -85,30 +90,46 @@ export default function EmployersPage() {
   }
 
   function handleDownload() {
-    const rows = list.map((e) => ({
-      회사명: e.company_name,
-      업종: e.business_type,
-      사업자등록번호: e.business_reg_number ?? '',
-      구인직무: e.job_duty ?? '',
-      구인인원: e.job_count ?? 0,
-      구인상태: e.hiring_status ?? '',
-      구인신청일: e.job_application_date ?? '',
-      구인만료일: e.job_expiry_date ?? '',
-      담당자: e.contact_name,
-      연락처: e.contact_phone,
-      지역: e.region,
-      주소: e.address,
-      메모: e.notes ?? '',
-    }))
-    const ws = XLSX.utils.json_to_sheet(rows)
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, '구인처')
+
+    const rows = list.map((e) => {
+      const programs = e.support_programs ?? []
+      const base: Record<string, string | number> = {
+        회사명: e.company_name,
+        업종: e.business_type,
+        사업자등록번호: e.business_reg_number ?? '',
+        구인직무: e.job_duty ?? '',
+        구인인원: e.job_count ?? 0,
+        구인상태: e.hiring_status ?? '',
+        구인신청일: e.job_application_date ?? '',
+        구인만료일: e.job_expiry_date ?? '',
+        담당자: e.contact_name,
+        연락처: e.contact_phone,
+        지역: e.region,
+        주소: e.address,
+      }
+      for (const p of SUPPORT_PROGRAMS) base[p] = programs.includes(p) ? 'Y' : ''
+      base['지원사업합계'] = programs.length
+      base['메모'] = e.notes ?? ''
+      return base
+    })
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), '구인처')
+
+    const programSummary = SUPPORT_PROGRAMS.map((p) => ({
+      지원사업: p,
+      참여기업수: list.filter((e) => (e.support_programs ?? []).includes(p)).length,
+    }))
+    programSummary.push({ 지원사업: '미참여', 참여기업수: list.filter((e) => !(e.support_programs ?? []).length).length })
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(programSummary), '지원사업집계')
+
     XLSX.writeFile(wb, `구인처_${new Date().toISOString().slice(0, 10)}.xlsx`)
   }
 
   function handleTemplateDownload() {
-    const rows = [{ 회사명: '', 업종: '', 사업자등록번호: '', 구인직무: '', 구인인원: 0, 구인상태: '구인중', 구인신청일: '', 구인만료일: '', 담당자: '', 연락처: '', 지역: '', 주소: '', 메모: '' }]
-    const ws = XLSX.utils.json_to_sheet(rows)
+    const row: Record<string, string | number> = { 회사명: '', 업종: '', 사업자등록번호: '', 구인직무: '', 구인인원: 0, 구인상태: '구인중', 구인신청일: '', 구인만료일: '', 담당자: '', 연락처: '', 지역: '', 주소: '' }
+    for (const p of SUPPORT_PROGRAMS) row[p] = ''
+    row['메모'] = ''
+    const ws = XLSX.utils.json_to_sheet([row])
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, '구인처')
     XLSX.writeFile(wb, '구인처_업로드양식.xlsx')
@@ -122,24 +143,31 @@ export default function EmployersPage() {
       const buf = await file.arrayBuffer()
       const wb = XLSX.read(buf)
       const ws = wb.Sheets[wb.SheetNames[0]]
-      const rows = XLSX.utils.sheet_to_json<Record<string, string>>(ws)
+      const rows = XLSX.utils.sheet_to_json<Record<string, string | number | Date>>(ws, { raw: true })
       const records = rows
         .filter((r) => r['회사명'])
-        .map((r) => ({
-          company_name: r['회사명'] ?? '',
-          business_type: r['업종'] ?? '',
-          business_reg_number: r['사업자등록번호'] ?? '',
-          job_duty: r['구인직무'] ?? '',
-          job_count: Number(r['구인인원'] ?? 0),
-          hiring_status: r['구인상태'] ?? '구인중',
-          job_application_date: r['구인신청일'] ? String(r['구인신청일']) : null,
-          job_expiry_date: r['구인만료일'] ? String(r['구인만료일']) : null,
-          contact_name: r['담당자'] ?? '',
-          contact_phone: String(r['연락처'] ?? ''),
-          region: r['지역'] ?? '',
-          address: r['주소'] ?? '',
-          notes: r['메모'] ?? '',
-        }))
+        .map((r) => {
+          const programs = SUPPORT_PROGRAMS.filter((p) => {
+            const v = String(r[p] ?? '').trim().toUpperCase()
+            return v === 'Y' || v === 'O' || v === 'TRUE' || v === '1' || v === '참여'
+          })
+          return {
+            company_name: String(r['회사명'] ?? ''),
+            business_type: String(r['업종'] ?? ''),
+            business_reg_number: String(r['사업자등록번호'] ?? ''),
+            job_duty: String(r['구인직무'] ?? ''),
+            job_count: Number(r['구인인원'] ?? 0),
+            hiring_status: String(r['구인상태'] ?? '구인중'),
+            job_application_date: excelToDateStr(r['구인신청일']),
+            job_expiry_date: excelToDateStr(r['구인만료일']),
+            contact_name: String(r['담당자'] ?? ''),
+            contact_phone: String(r['연락처'] ?? ''),
+            region: String(r['지역'] ?? ''),
+            address: String(r['주소'] ?? ''),
+            support_programs: programs,
+            notes: String(r['메모'] ?? ''),
+          }
+        })
       if (records.length === 0) {
         setUploadMsg('유효한 데이터가 없습니다. (회사명 필수)')
         return
@@ -260,9 +288,28 @@ export default function EmployersPage() {
                   value={form.job_expiry_date ?? ''}
                   onChange={(e) => setForm({ ...form, job_expiry_date: e.target.value || null })} />
                 <button type="button" className="px-2.5 py-2 text-xs bg-blue-50 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-100 whitespace-nowrap"
-                  onClick={() => { const d = new Date(form.job_application_date ?? new Date().toISOString().slice(0,10)); d.setMonth(d.getMonth()+3); setForm({...form, job_expiry_date: d.toISOString().slice(0,10)}) }}>3개월</button>
+                  onClick={() => setForm({ ...form, job_expiry_date: addMonthsExpiry(form.job_application_date, 3) })}>3개월</button>
                 <button type="button" className="px-2.5 py-2 text-xs bg-blue-50 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-100 whitespace-nowrap"
-                  onClick={() => { const d = new Date(form.job_application_date ?? new Date().toISOString().slice(0,10)); d.setMonth(d.getMonth()+6); setForm({...form, job_expiry_date: d.toISOString().slice(0,10)}) }}>6개월</button>
+                  onClick={() => setForm({ ...form, job_expiry_date: addMonthsExpiry(form.job_application_date, 6) })}>6개월</button>
+              </div>
+            </div>
+            <div className="col-span-2">
+              <label className="text-sm text-gray-600 mb-1 block">참여 지원사업 <span className="text-xs text-gray-400 font-normal">(중복 선택 가능)</span></label>
+              <div className="flex flex-wrap gap-2">
+                {SUPPORT_PROGRAMS.map((p) => {
+                  const checked = (form.support_programs ?? []).includes(p)
+                  return (
+                    <label key={p} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border cursor-pointer text-sm transition-colors ${checked ? 'bg-blue-50 border-blue-400 text-blue-700 font-medium' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                      <input type="checkbox" className="w-4 h-4"
+                        checked={checked}
+                        onChange={(e) => {
+                          const cur = form.support_programs ?? []
+                          setForm({ ...form, support_programs: e.target.checked ? [...cur, p] : cur.filter((x) => x !== p) })
+                        }} />
+                      {p}
+                    </label>
+                  )
+                })}
               </div>
             </div>
             <div className="col-span-2">
@@ -291,7 +338,7 @@ export default function EmployersPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-600 sticky top-0 z-10">
               <tr>
-                {['회사명', '업종', '구인직무', '구인인원', '구인상태', '구인신청일', '구인만료일', '담당자', '연락처', '지역', '관리'].map((h) => (
+                {['회사명', '업종', '구인직무', '구인인원', '구인상태', '구인신청일', '구인만료일', '지원사업', '담당자', '연락처', '지역', '관리'].map((h) => (
                   <th key={h} className="text-left px-4 py-3 font-medium">{h}</th>
                 ))}
               </tr>
@@ -315,6 +362,17 @@ export default function EmployersPage() {
                         {emp.job_expiry_date}
                       </span>
                     ) : '-'}
+                  </td>
+                  <td className="px-4 py-3">
+                    {(emp.support_programs ?? []).length === 0 ? (
+                      <span className="text-gray-300 text-xs">-</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {(emp.support_programs ?? []).map((p) => (
+                          <span key={p} className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-[11px] whitespace-nowrap">{p}</span>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3">{emp.contact_name}</td>
                   <td className="px-4 py-3">{emp.contact_phone}</td>

@@ -12,6 +12,7 @@ export interface Employer {
   region: string
   job_application_date: string | null
   job_expiry_date: string | null
+  support_programs: string[] | null
   notes: string | null
   created_at: string
 }
@@ -69,6 +70,7 @@ export interface JobSeeker {
   employment_date: string | null    // 취업일자
   employment_company: string | null // 취업처
   business_reg_number: string | null // 사업자등록번호
+  incentives: string[] | null       // 장려금 지원 (다중선택)
   notes: string | null
   created_at: string
   placement_history?: PlacementHistory[]
