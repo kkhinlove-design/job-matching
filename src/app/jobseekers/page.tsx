@@ -1031,7 +1031,7 @@ export default function JobSeekersPage() {
         ) : filtered.length === 0 ? (
           <p className="p-6 text-gray-500">등록된 구직자가 없습니다.</p>
         ) : (
-          <table className="min-w-full text-sm whitespace-nowrap" style={{ width: 'max-content' }}>
+          <table className="text-sm whitespace-nowrap">
             <thead className="bg-gray-50 text-gray-600 sticky top-0 z-10">
               <tr>
                 <th className="px-3 py-3 w-8">
