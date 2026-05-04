@@ -381,7 +381,7 @@ export default function EmployersPage() {
         ) : list.length === 0 ? (
           <p className="p-6 text-gray-500">등록된 구인처가 없습니다.</p>
         ) : (
-          <table className="w-full text-sm">
+          <table className="min-w-full text-sm whitespace-nowrap" style={{ width: 'max-content' }}>
             <thead className="bg-gray-50 text-gray-600 sticky top-0 z-10">
               <tr>
                 {['회사명', '업종', '구인직무', '구인인원', '구인상태', '구인신청일', '구인만료일', '지원사업', '담당자', '연락처', '지역', '관리'].map((h) => (
